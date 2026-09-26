@@ -13,3 +13,12 @@ html, body {
   width: 100%;
   overflow-x: hidden;
 }
+
+#root {
+  min-height: 100%;
+}
+
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+}

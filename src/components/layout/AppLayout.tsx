@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User } from '@/lib/types';
 import { Button } from '@/components/ui/Button';
 import { WelcomePopup } from '@/components/WelcomePopup';
-import { MessageSquare,  
+import { ArrowLeft, MessageSquare,
   Menu, Home, BookOpen, Bell, User as UserIcon, LogOut, Settings, 
   Users, GraduationCap, Briefcase, School, Calendar, CalendarDays, 
   FileText, Archive, CreditCard, Package, Activity, Megaphone, PieChart,
@@ -187,7 +187,7 @@ export function AppLayout({ user, onLogout, children, currentMenu, onMenuChange,
   
 
   return (
-    <div className="flex h-screen w-full bg-[#F1F5F9] flex-col md:flex-row overflow-hidden font-sans text-slate-800">
+    <div className="app-shell flex w-full bg-[#F1F5F9] flex-col md:flex-row overflow-hidden font-sans text-slate-800">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 flex-col border-r border-slate-200 bg-white">
         <div className="p-6 flex items-center gap-3 border-b border-slate-100">
@@ -230,13 +230,24 @@ export function AppLayout({ user, onLogout, children, currentMenu, onMenuChange,
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        <header className="md:hidden flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4">
+      <main className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative">
+        <header className="md:hidden flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-3">
           <div className="flex items-center gap-2 min-w-0">
-             <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold">S</div>
-             <h1 className="text-lg font-bold text-slate-800 truncate">SW-SCHOOL</h1>
+             {currentMenu !== 'Dashboard' && (
+               <button
+                 type="button"
+                 aria-label="กลับไปเมนูทั้งหมด"
+                 title="กลับไปเมนูทั้งหมด"
+                 onClick={() => setMobileMenuOpen(true)}
+                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
+               >
+                 <ArrowLeft size={22} />
+               </button>
+             )}
+             {currentMenu === 'Dashboard' && <div className="w-8 h-8 shrink-0 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold">S</div>}
+             <h1 className="truncate text-lg font-bold text-slate-800">{currentMenu === 'Dashboard' ? 'SW-SCHOOL' : currentMenu}</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1">
             <button
               type="button"
               onClick={handleLogout}
@@ -245,13 +256,13 @@ export function AppLayout({ user, onLogout, children, currentMenu, onMenuChange,
               <LogOut size={14} className="mr-1" />
               ออก
             </button>
-            <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)}>
+            <Button variant="ghost" size="icon" aria-label="เปิดเมนูทั้งหมด" onClick={() => setMobileMenuOpen(true)}>
               <Menu size={24} className="text-slate-500" />
             </Button>
           </div>
         </header>
         {/* Desktop Header */}
-        <header className="hidden md:flex h-16 bg-white border-b border-slate-200 px-8 items-center justify-between">
+        <header className="hidden md:flex h-16 shrink-0 bg-white border-b border-slate-200 px-8 items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">🟢 {user.role} DASHBOARD</span>
             <h1 className="text-lg font-bold text-slate-800 ml-4">ภาพรวมการทำงาน</h1>
@@ -284,15 +295,15 @@ export function AppLayout({ user, onLogout, children, currentMenu, onMenuChange,
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto p-4 md:p-8 pb-24 md:pb-8">
-          <div className="max-w-6xl mx-auto w-full h-full">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain p-4 md:p-8 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="max-w-6xl mx-auto w-full min-h-full">
             {children}
           </div>
         </div>
         <WelcomePopup user={simulatedUser || user} />
 
         {/* Mobile Bottom Nav */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center h-16 pb-safe px-2 z-40">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center px-2 z-40" style={{ height: 'calc(4rem + env(safe-area-inset-bottom))', paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <MobileNavItem icon={<Home size={24} />} label="หน้า" active={currentMenu === 'Dashboard'} onClick={() => handleMenuClick('Dashboard')} />
           <MobileNavItem icon={<Menu size={24} />} label="เมนูทั้งหมด" active={mobileMenuOpen} onClick={() => setMobileMenuOpen(true)} />
           <MobileNavItem icon={<Bell size={24} />} label="แจ้งเตือน" />

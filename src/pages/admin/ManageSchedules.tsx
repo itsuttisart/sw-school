@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { CalendarDays, Edit, Eye } from 'lucide-react';
+import { CalendarDays, Edit, Settings, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import Swal from 'sweetalert2';
 
 export function AdminManageSchedules() {
   const [viewMode, setViewMode] = useState<'class' | 'teacher' | 'setup'>('setup');
@@ -34,7 +35,7 @@ export function AdminManageSchedules() {
       </div>
 
       {viewMode !== 'setup' && (<div className="flex flex-col md:flex-row gap-4 mb-6">
-        <select className="bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-emerald-500 focus:border-emerald-500 block p-2.5 font-medium min-w-[200px]">
+        <select className="bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-emerald-500 focus:border-emerald-500 block p-2.5 font-medium min-w-50">
           {viewMode === 'setup' ? null : viewMode === 'class' ? (
             <>
               <option value="">-- เลือกห้องเรียน --</option>

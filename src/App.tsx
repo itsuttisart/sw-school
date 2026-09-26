@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { User } from '@/lib/types';
 import { Login } from '@/pages/Login';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -49,26 +49,53 @@ import { usePWAInstall } from '@/lib/usePWAInstall';
 import { useOnlineStatus } from '@/lib/useOnlineStatus';
 import { Download } from 'lucide-react';
 
-function PWAInstallPrompt() {
+const IOS_INSTALL_PROMPT_KEY = 'sw-school-ios-install-prompt-shown-at';
+const IOS_INSTALL_PROMPT_INTERVAL = 30 * 24 * 60 * 60 * 1000;
+
+function PWAInstallPrompt({ currentMenu }: { currentMenu: string | null }) {
   const { isInstallable, install, isInstalled, isIOS } = usePWAInstall();
   const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [showIOSInstallPrompt, setShowIOSInstallPrompt] = useState(false);
+  const iosPromptShownThisSession = useRef(false);
 
-  if (isInstalled) return null;
+  useEffect(() => {
+    if (currentMenu !== 'Dashboard' || isInstalled || !isIOS) {
+      setShowIOSInstallPrompt(false);
+      return;
+    }
+
+    if (iosPromptShownThisSession.current) return;
+
+    const lastShownAt = Number(localStorage.getItem(IOS_INSTALL_PROMPT_KEY) || 0);
+    if (Date.now() - lastShownAt < IOS_INSTALL_PROMPT_INTERVAL) return;
+
+    iosPromptShownThisSession.current = true;
+    localStorage.setItem(IOS_INSTALL_PROMPT_KEY, String(Date.now()));
+    setShowIOSInstallPrompt(true);
+  }, [currentMenu, isInstalled, isIOS]);
+
+  if (isInstalled || currentMenu !== 'Dashboard') return null;
 
   if (isInstallable) {
     return (
-      <button onClick={install} className="fixed top-4 right-4 z-50 flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-emerald-600 shadow-md border border-emerald-100 hover:bg-emerald-50 transition-colors">
-        <Download size={16} /> ติดตั้งแอป
-      </button>
+      <div className="mb-4 flex justify-end">
+        <button onClick={install} className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-emerald-600 shadow-md border border-emerald-100 hover:bg-emerald-50 transition-colors">
+          <Download size={16} /> ติดตั้งแอป
+        </button>
+      </div>
     );
   }
 
   if (isIOS) {
+    if (!showIOSInstallPrompt) return null;
+
     return (
       <>
-        <button onClick={() => setShowIOSGuide(true)} className="fixed top-4 right-4 z-50 flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-emerald-600 shadow-md border border-emerald-100 hover:bg-emerald-50 transition-colors">
-          <Download size={16} /> ติดตั้งแอป (iOS)
-        </button>
+        <div className="mb-4 flex justify-end">
+          <button onClick={() => setShowIOSGuide(true)} className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-emerald-600 shadow-md border border-emerald-100 hover:bg-emerald-50 transition-colors">
+            <Download size={16} /> ติดตั้งแอป (iOS)
+          </button>
+        </div>
         {showIOSGuide && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
             <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl border border-slate-200">
@@ -111,7 +138,7 @@ export default function App() {
   if (!user) {
     return (
       <>
-        <PWAInstallPrompt />
+        <PWAInstallPrompt currentMenu={null} />
         <OfflineIndicator />
         <Login onLogin={(u) => { setUser(u); setCurrentMenu('Dashboard'); }} />
       </>
@@ -216,7 +243,7 @@ export default function App() {
 
   return (
     <AppLayout user={user} onLogout={() => setUser(null)} currentMenu={currentMenu} onMenuChange={setCurrentMenu} simulatedUser={simulatedUser} onSimulateUser={setSimulatedUser}>
-      <PWAInstallPrompt />
+      <PWAInstallPrompt currentMenu={currentMenu} />
       <OfflineIndicator />
       {renderContent()}
     </AppLayout>
