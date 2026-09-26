@@ -45,6 +45,7 @@ import { StudentProfile, StudentNews, StudentCalendar, StudentDocuments, Student
 import { ParentDashboard } from '@/pages/ParentDashboard';
 import { ParentChat } from '@/pages/parent/ParentChat';
 import { UserSettings } from '@/pages/UserSettings';
+import { LeaveRequests } from '@/pages/LeaveRequests';
 import { usePWAInstall } from '@/lib/usePWAInstall';
 import { useOnlineStatus } from '@/lib/useOnlineStatus';
 import { Download } from 'lucide-react';
@@ -224,6 +225,7 @@ export default function App() {
       if (currentMenu === 'ระบบการเงิน') return <AdminFinanceSystem />;
       if (currentMenu === 'ระบบพัสดุ') return <AdminInventorySystem />;
       if (currentMenu === 'ระบบกิจการนักเรียน') return <AdminStudentAffairs />;
+      if (currentMenu === 'คำขอลา') return <LeaveRequests user={user} />;
       if (currentMenu === 'ระบบประกาศ') return <AdminAnnouncementSystem />;
       if (currentMenu === 'จัดการป็อปอัพ') return <AdminPopupManager />;
       if (currentMenu === 'แจ้งซ่อมแซม') return <AdminMaintenance />;
@@ -240,6 +242,7 @@ export default function App() {
       if (currentMenu === 'เช็คชื่อ' || currentMenu === 'เช็คชื่อรายวิชา') return <TeacherSubjectAttendance user={activeUser} />;
       if (currentMenu === 'เช็คชื่อละหมาด') return <TeacherPrayerAttendance user={activeUser} />;
       if (currentMenu === 'แชทกับผู้ปกครอง') return <TeacherChat user={activeUser} />;
+      if (currentMenu === 'ยื่นลา') return <LeaveRequests user={activeUser} />;
       
       // Student routes
       if (currentMenu === 'ผลการเรียน' || currentMenu === 'คะแนน') return <StudentGrades user={activeUser} />;
@@ -251,10 +254,12 @@ export default function App() {
       if (currentMenu === 'เอกสาร') return <StudentDocuments user={activeUser} />;
       if (currentMenu === 'กิจกรรม/ผลงาน') return <StudentActivities user={activeUser} />;
       if (currentMenu === 'แจ้งเตือน') return <StudentNotifications user={activeUser} />;
+      if (currentMenu === 'ยื่นลา') return <LeaveRequests user={activeUser} />;
       
       // Parent routes
       if (currentMenu === 'ข้อมูลบุตร') return <StudentProfile user={activeUser} />;
       if (currentMenu === 'แชทกับครูที่ปรึกษา') return <ParentChat user={activeUser} />;
+      if (currentMenu === 'ยื่นลา') return <LeaveRequests user={activeUser} />;
       
       if (currentMenu === 'ตั้งค่าบัญชี') return <UserSettings user={activeUser} onUpdate={handleUserUpdate} />;
       
@@ -272,6 +277,7 @@ export default function App() {
       if (currentMenu === 'เช็คชื่อ' || currentMenu === 'เช็คชื่อรายวิชา') return <TeacherSubjectAttendance user={user} />;
       if (currentMenu === 'เช็คชื่อละหมาด') return <TeacherPrayerAttendance user={user} />;
       if (currentMenu === 'แชทกับผู้ปกครอง') return <TeacherChat user={user} />;
+      if (currentMenu === 'ยื่นลา') return <LeaveRequests user={user} />;
       if (currentMenu === 'ตั้งค่าบัญชี') return <UserSettings user={user} onUpdate={handleUserUpdate} />;
       return <TeacherDashboard user={user} />;
     }
@@ -286,6 +292,7 @@ export default function App() {
       if (currentMenu === 'เอกสาร') return <StudentDocuments user={user} />;
       if (currentMenu === 'กิจกรรม/ผลงาน') return <StudentActivities user={user} />;
       if (currentMenu === 'แจ้งเตือน') return <StudentNotifications user={user} />;
+      if (currentMenu === 'ยื่นลา') return <LeaveRequests user={user} />;
       if (currentMenu === 'ตั้งค่าบัญชี') return <UserSettings user={user} onUpdate={handleUserUpdate} />;
       return <StudentDashboard user={user} />;
     }
@@ -298,6 +305,7 @@ export default function App() {
       if (currentMenu === 'การบ้าน') return <StudentHomework user={user} />;
       if (currentMenu === 'ข่าวสาร') return <StudentNews user={user} />;
       if (currentMenu === 'แชทกับครูที่ปรึกษา') return <ParentChat user={user} />;
+      if (currentMenu === 'ยื่นลา') return <LeaveRequests user={user} />;
       if (currentMenu === 'ตั้งค่าบัญชี') return <UserSettings user={user} onUpdate={handleUserUpdate} />;
       return <ParentDashboard user={user} />;
     }

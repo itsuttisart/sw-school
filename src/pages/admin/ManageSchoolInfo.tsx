@@ -1,166 +1,78 @@
-import React, { useState } from 'react';
-import { Building2, Save, Upload, MapPin } from 'lucide-react';
+import { ChangeEvent, FormEvent, useState } from 'react';
+import { Building2, ImagePlus, MapPin, Save, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { readLocalData, writeLocalData } from '@/lib/localData';
 import Swal from 'sweetalert2';
 
+type SchoolInfo = { code: string; name: string; shortName: string; nameEn: string; shortNameEn: string; phone: string; email: string; addressNo: string; moo: string; subdistrict: string; district: string; province: string; postalCode: string; location: string; logo: string; printLogo: string };
+const STORAGE_KEY = 'sw-school:school-info';
+const DEFAULT_INFO: SchoolInfo = { code: '1010010001', name: 'โรงเรียนตัวอย่างวิทยา', shortName: 'ต.ย.ว.', nameEn: 'Sample Wittaya School', shortNameEn: 'S.W.S.', phone: '02-123-4567', email: 'info@school.ac.th', addressNo: '123', moo: '1', subdistrict: 'บางรัก', district: 'บางรัก', province: 'กรุงเทพมหานคร', postalCode: '10500', location: '13.730248, 100.523450', logo: '', printLogo: '' };
+const PROVINCES = ['กรุงเทพมหานคร', 'ยะลา', 'ปัตตานี', 'นราธิวาส', 'สงขลา', 'สตูล', 'สมุทรปราการ'];
+
 export function AdminManageSchoolInfo() {
+  const [savedInfo, setSavedInfo] = useState(() => readLocalData(STORAGE_KEY, DEFAULT_INFO));
+  const [form, setForm] = useState(savedInfo);
   const [isEditing, setIsEditing] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    Swal.fire({
-      title: 'บันทึกข้อมูล?',
-      text: "คุณต้องการบันทึกข้อมูลโรงเรียนใช่หรือไม่",
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#10b981',
-      confirmButtonText: 'บันทึก',
-      cancelButtonText: 'ยกเลิก'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setIsEditing(false);
-        Swal.fire('บันทึกสำเร็จ!', 'อัปเดตข้อมูลโรงเรียนเรียบร้อยแล้ว', 'success');
-      }
-    });
+  const update = (field: keyof SchoolInfo, value: string) => setForm(current => ({ ...current, [field]: value }));
+  const uploadLogo = (field: 'logo' | 'printLogo', event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/') || file.size > 1_500_000) {
+      Swal.fire('เลือกภาพไม่ได้', 'รองรับไฟล์ภาพขนาดไม่เกิน 1.5 MB', 'warning');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => Swal.fire('อ่านภาพไม่สำเร็จ', 'กรุณาเลือกไฟล์อื่น', 'error');
+    reader.onload = () => update(field, String(reader.result));
+    reader.readAsDataURL(file);
   };
 
-  return (
-    <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b border-slate-100 pb-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Building2 className="text-emerald-500" /> ข้อมูลโรงเรียน
-          </h2>
-          <p className="text-slate-500 text-sm mt-1">จัดการข้อมูลพื้นฐานและสถานที่ตั้งของสถานศึกษา</p>
-        </div>
-        {!isEditing && (
-          <Button onClick={() => setIsEditing(true)} className="bg-blue-600 hover:bg-blue-700 text-white shadow-md">
-            แก้ไขข้อมูล
-          </Button>
-        )}
-      </div>
+  const save = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!form.name.trim() || !form.code.trim()) {
+      Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกรหัสและชื่อโรงเรียน', 'warning');
+      return;
+    }
+    const confirmation = await Swal.fire({ title: 'บันทึกข้อมูลโรงเรียน?', icon: 'question', showCancelButton: true, confirmButtonText: 'บันทึก', cancelButtonText: 'ยกเลิก' });
+    if (!confirmation.isConfirmed) return;
+    const normalized = { ...form, name: form.name.trim(), code: form.code.trim() };
+    if (!writeLocalData(STORAGE_KEY, normalized)) {
+      Swal.fire('บันทึกไม่สำเร็จ', 'ข้อมูลหรือรูปโลโก้ใช้พื้นที่จัดเก็บมากเกินไป กรุณาใช้ภาพขนาดเล็กลง', 'error');
+      return;
+    }
+    setSavedInfo(normalized);
+    setForm(normalized);
+    setIsEditing(false);
+    Swal.fire({ title: 'บันทึกสำเร็จ', icon: 'success', timer: 1300, showConfirmButton: false });
+  };
 
-      <form onSubmit={handleSave} className="space-y-8">
-        
-        {/* Logos */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="flex flex-col items-center p-6 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
-            <h3 className="font-bold text-slate-700 mb-4">ตราสัญลักษณ์</h3>
-            <div className="w-32 h-32 bg-white border border-slate-200 rounded-xl flex items-center justify-center mb-4 shadow-sm">
-              <Building2 size={48} className="text-slate-300" />
-            </div>
-            {isEditing && (
-              <Button type="button" variant="outline" size="sm" className="w-full max-w-[200px]">
-                <Upload size={16} className="mr-2" /> อัปโหลดตราสัญลักษณ์
-              </Button>
-            )}
-          </div>
+  const cancel = () => { setForm(savedInfo); setIsEditing(false); };
+  const field = (label: string, key: keyof SchoolInfo, options: { type?: string; wide?: boolean } = {}) => (
+    <label className={`block text-sm font-medium text-slate-700 ${options.wide ? 'md:col-span-2' : ''}`}>{label}<Input type={options.type || 'text'} value={form[key]} readOnly={!isEditing} onChange={event => update(key, event.target.value)} className={!isEditing ? 'bg-slate-50 text-slate-600' : ''} /></label>
+  );
 
-          <div className="flex flex-col items-center p-6 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
-            <h3 className="font-bold text-slate-700 mb-4">ตราสัญลักษณ์สำหรับพิมพ์</h3>
-            <div className="w-32 h-32 bg-white border border-slate-200 rounded-xl flex items-center justify-center mb-4 shadow-sm grayscale opacity-70">
-              <Building2 size={48} className="text-slate-300" />
-            </div>
-            {isEditing && (
-              <Button type="button" variant="outline" size="sm" className="w-full max-w-[200px]">
-                <Upload size={16} className="mr-2" /> อัปโหลดโลโก้สำหรับพิมพ์
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* General Info */}
-        <section>
-          <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100">ข้อมูลทั่วไป</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">รหัสสถานศึกษา</label>
-              <Input defaultValue="1010010001" readOnly={!isEditing} className={!isEditing ? "bg-slate-50 text-slate-500" : ""} />
-            </div>
-            <div className="lg:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อโรงเรียน</label>
-              <Input defaultValue="โรงเรียนตัวอย่างวิทยา" readOnly={!isEditing} className={!isEditing ? "bg-slate-50 text-slate-500" : ""} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อย่อ</label>
-              <Input defaultValue="ต.ย.ว." readOnly={!isEditing} className={!isEditing ? "bg-slate-50 text-slate-500" : ""} />
-            </div>
-            <div className="lg:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อโรงเรียน (ENG)</label>
-              <Input defaultValue="Sample Wittaya School" readOnly={!isEditing} className={!isEditing ? "bg-slate-50 text-slate-500" : ""} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อย่อ (ENG)</label>
-              <Input defaultValue="S.W.S." readOnly={!isEditing} className={!isEditing ? "bg-slate-50 text-slate-500" : ""} />
-            </div>
-          </div>
-        </section>
-
-        {/* Contact & Address */}
-        <section>
-          <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100">ข้อมูลการติดต่อและที่อยู่</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">เบอร์โทรศัพท์หลัก</label>
-              <Input defaultValue="02-123-4567" readOnly={!isEditing} className={!isEditing ? "bg-slate-50 text-slate-500" : ""} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">อีเมล</label>
-              <Input defaultValue="info@school.ac.th" readOnly={!isEditing} className={!isEditing ? "bg-slate-50 text-slate-500" : ""} />
-            </div>
-            <div className="hidden lg:block"></div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">ที่อยู่บ้านเลขที่</label>
-              <Input defaultValue="123" readOnly={!isEditing} className={!isEditing ? "bg-slate-50 text-slate-500" : ""} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">หมู่</label>
-              <Input defaultValue="1" readOnly={!isEditing} className={!isEditing ? "bg-slate-50 text-slate-500" : ""} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">แขวง/ตำบล</label>
-              <Input defaultValue="บางรัก" readOnly={!isEditing} className={!isEditing ? "bg-slate-50 text-slate-500" : ""} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">เขต/อำเภอ</label>
-              <Input defaultValue="บางรัก" readOnly={!isEditing} className={!isEditing ? "bg-slate-50 text-slate-500" : ""} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">จังหวัด</label>
-              <select disabled={!isEditing} className={`w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 ${!isEditing ? "bg-slate-50 text-slate-500" : "bg-white"}`}>
-                <option value="กทม.">กรุงเทพมหานคร</option>
-                <option value="สมุทรปราการ">สมุทรปราการ</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">รหัสไปรษณีย์</label>
-              <Input defaultValue="10500" readOnly={!isEditing} className={!isEditing ? "bg-slate-50 text-slate-500" : ""} />
-            </div>
-            <div className="lg:col-span-3">
-              <label className="block text-sm font-medium text-slate-700 mb-1">ที่ตั้ง (ลิงก์ Google Maps หรือ พิกัด)</label>
-              <div className="flex gap-2">
-                <div className={`flex items-center justify-center px-3 border border-slate-200 rounded-md ${!isEditing ? "bg-slate-100 text-slate-400" : "bg-white text-slate-500"}`}>
-                  <MapPin size={18} />
-                </div>
-                <Input defaultValue="13.730248, 100.523450" readOnly={!isEditing} className={`flex-1 ${!isEditing ? "bg-slate-50 text-slate-500" : ""}`} />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {isEditing && (
-          <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
-            <Button type="button" onClick={() => setIsEditing(false)} variant="outline" className="min-w-[120px]">
-              ยกเลิก
-            </Button>
-            <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[120px]">
-              <Save size={18} className="mr-2" /> บันทึกข้อมูล
-            </Button>
-          </div>
-        )}
-      </form>
+  const logoEditor = (fieldName: 'logo' | 'printLogo', title: string) => (
+    <div className="flex flex-col items-center rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <h3 className="mb-3 text-sm font-bold text-slate-700">{title}</h3>
+      <div className="mb-3 flex h-32 w-32 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white p-2">{form[fieldName] ? <img src={form[fieldName]} alt={title} className="h-full w-full object-contain" /> : <Building2 size={44} className="text-slate-300" />}</div>
+      {isEditing && <div className="flex gap-2"><label className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-100"><Upload size={14} className="mr-2" />เลือกรูป<input type="file" accept="image/*" onChange={event => uploadLogo(fieldName, event)} className="sr-only" /></label>{form[fieldName] && <Button type="button" variant="ghost" size="icon" aria-label={`ลบ${title}`} onClick={() => update(fieldName, '')}><X size={16} /></Button>}</div>}
     </div>
+  );
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:rounded-3xl md:p-8">
+      <header className="mb-6 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="flex items-center gap-2 text-xl font-bold text-slate-800 md:text-2xl"><Building2 className="text-emerald-600" /> ข้อมูลโรงเรียน</h2><p className="mt-1 text-sm text-slate-500">ข้อมูลติดต่อ ที่อยู่ และตราสัญลักษณ์</p></div>{!isEditing && <Button type="button" onClick={() => setIsEditing(true)}>แก้ไขข้อมูล</Button>}</header>
+      <form onSubmit={save} className="space-y-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{logoEditor('logo', 'ตราสัญลักษณ์โรงเรียน')}{logoEditor('printLogo', 'ตราสัญลักษณ์สำหรับพิมพ์')}</div>
+        {isEditing && <p className="-mt-3 flex items-center gap-1 text-xs text-slate-500"><ImagePlus size={14} />ไฟล์ภาพต้องมีขนาดไม่เกิน 1.5 MB</p>}
+        <section><h3 className="mb-3 border-b border-slate-100 pb-2 font-bold text-slate-800">ข้อมูลทั่วไป</h3><div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">{field('รหัสสถานศึกษา', 'code')}{field('ชื่อโรงเรียน', 'name', { wide: true })}{field('ชื่อย่อ', 'shortName')}{field('ชื่อโรงเรียน (ภาษาอังกฤษ)', 'nameEn', { wide: true })}{field('ชื่อย่อ (ภาษาอังกฤษ)', 'shortNameEn')}</div></section>
+        <section><h3 className="mb-3 border-b border-slate-100 pb-2 font-bold text-slate-800">ข้อมูลติดต่อและที่อยู่</h3><div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">{field('เบอร์โทรศัพท์หลัก', 'phone', { type: 'tel' })}{field('อีเมล', 'email', { type: 'email' })}{field('บ้านเลขที่', 'addressNo')}{field('หมู่', 'moo')}{field('ตำบล/แขวง', 'subdistrict')}{field('อำเภอ/เขต', 'district')}<label className="block text-sm font-medium text-slate-700">จังหวัด<select disabled={!isEditing} value={form.province} onChange={event => update('province', event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm disabled:bg-slate-50 disabled:text-slate-600">{PROVINCES.map(province => <option key={province}>{province}</option>)}</select></label>{field('รหัสไปรษณีย์', 'postalCode')}
+          <label className="block text-sm font-medium text-slate-700 md:col-span-2 lg:col-span-3">ที่ตั้ง (ลิงก์ Google Maps หรือพิกัด)<div className="relative"><MapPin size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><Input value={form.location} readOnly={!isEditing} onChange={event => update('location', event.target.value)} className={`pl-10 ${!isEditing ? 'bg-slate-50 text-slate-600' : ''}`} /></div></label></div></section>
+        {isEditing && <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={cancel}>ยกเลิก</Button><Button type="submit"><Save size={17} className="mr-2" />บันทึกข้อมูล</Button></div>}
+      </form>
+    </section>
   );
 }

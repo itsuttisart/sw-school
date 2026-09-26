@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { User } from '@/lib/types';
+import { readLocalData } from '@/lib/localData';
 import { Button } from '@/components/ui/Button';
 import { WelcomePopup } from '@/components/WelcomePopup';
 import { ArrowLeft, MessageSquare,
@@ -47,6 +48,7 @@ const getMenuItems = (role: string): MenuItem[] => {
       { label: 'ระบบการเงิน', icon: CreditCard },
       { label: 'ระบบพัสดุ', icon: Package },
       { label: 'ระบบกิจการนักเรียน', icon: Activity },
+      { label: 'คำขอลา', icon: CalendarDays },
       { label: 'แจ้งซ่อมแซม', icon: Wrench },
       
       { label: 'งานสารบรรณและประกาศ', isHeader: true },
@@ -104,6 +106,7 @@ const getMenuItems = (role: string): MenuItem[] => {
       { label: 'ข้อมูลนักเรียน', icon: FileText },
       { label: 'ข้อมูลผู้ปกครอง', icon: Users },
       { label: 'แชทกับผู้ปกครอง', icon: MessageCircle },
+      { label: 'ยื่นลา', icon: CalendarDays },
     ];
   }
   
@@ -119,6 +122,7 @@ const getMenuItems = (role: string): MenuItem[] => {
       { label: 'ตารางเรียน', icon: BookOpen },
       { label: 'การเข้าเรียน', icon: Clock },
       { label: 'การบ้าน', icon: FileEdit },
+      { label: 'ยื่นลา', icon: CalendarDays },
       
       { label: 'ผลการศึกษา', isHeader: true },
       { label: 'คะแนน', icon: BarChart },
@@ -148,6 +152,7 @@ const getMenuItems = (role: string): MenuItem[] => {
       { label: 'ข่าวสาร', icon: Megaphone },
       { label: 'กิจกรรม', icon: Calendar },
       { label: 'แชทกับครูที่ปรึกษา', icon: MessageCircle },
+      { label: 'ยื่นลา', icon: CalendarDays },
       { label: 'การแจ้งเตือน', icon: Bell },
     ];
   }
@@ -157,6 +162,17 @@ const getMenuItems = (role: string): MenuItem[] => {
 
 export function AppLayout({ user, onLogout, children, currentMenu, onMenuChange, simulatedUser, onSimulateUser }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [schoolLogo, setSchoolLogo] = useState(() => readLocalData<{ logo?: string }>('sw-school:school-info', {}).logo || '');
+
+  useEffect(() => {
+    const refreshSchoolLogo = (event: Event) => {
+      if ((event as CustomEvent<{ key?: string }>).detail?.key === 'sw-school:school-info') {
+        setSchoolLogo(readLocalData<{ logo?: string }>('sw-school:school-info', {}).logo || '');
+      }
+    };
+    window.addEventListener('sw-school:data-updated', refreshSchoolLogo);
+    return () => window.removeEventListener('sw-school:data-updated', refreshSchoolLogo);
+  }, []);
 
   const handleLogout = () => {
     Swal.fire({
@@ -191,7 +207,7 @@ export function AppLayout({ user, onLogout, children, currentMenu, onMenuChange,
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 flex-col border-r border-slate-200 bg-white">
         <div className="p-6 flex items-center gap-3 border-b border-slate-100">
-          <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">S</div>
+          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-emerald-600 text-xl font-bold text-white">{schoolLogo ? <img src={schoolLogo} alt="ตราสัญลักษณ์โรงเรียน" className="h-full w-full object-contain" /> : 'S'}</div>
           <span className="font-bold text-xl tracking-tight">SW-SCHOOL</span>
         </div>
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
@@ -244,7 +260,7 @@ export function AppLayout({ user, onLogout, children, currentMenu, onMenuChange,
                  <ArrowLeft size={22} />
                </button>
              )}
-             {currentMenu === 'Dashboard' && <div className="w-8 h-8 shrink-0 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold">S</div>}
+             {currentMenu === 'Dashboard' && <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-emerald-600 font-bold text-white">{schoolLogo ? <img src={schoolLogo} alt="ตราสัญลักษณ์โรงเรียน" className="h-full w-full object-contain" /> : 'S'}</div>}
              <h1 className="truncate text-lg font-bold text-slate-800">{currentMenu === 'Dashboard' ? 'SW-SCHOOL' : currentMenu}</h1>
           </div>
           <div className="flex shrink-0 items-center gap-1">
