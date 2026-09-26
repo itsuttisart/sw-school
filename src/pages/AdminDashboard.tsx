@@ -137,11 +137,11 @@ export function AdminDashboard() {
       </div>
 
       {/* Recent Activity */}
-      <div className="md:col-span-5 bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex flex-col h-[400px]">
+      <div className="md:col-span-5 bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex flex-col min-h-80 md:h-100">
         <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
           🔔 กิจกรรมล่าสุด
         </h3>
-        <div className="space-y-4 flex-1 overflow-y-auto pr-2">
+        <div className="space-y-4 md:flex-1 md:overflow-y-auto md:pr-2">
           <ActivityItem 
             title="อัปเดตระบบสารบรรณ V.2.1" 
             desc="ดำเนินการเสร็จสิ้นโดย Admin"
