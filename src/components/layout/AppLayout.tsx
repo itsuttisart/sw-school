@@ -232,13 +232,23 @@ export function AppLayout({ user, onLogout, children, currentMenu, onMenuChange,
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <header className="md:hidden flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold">S</div>
-             <h1 className="text-lg font-bold text-slate-800">SW-SCHOOL</h1>
+             <h1 className="text-lg font-bold text-slate-800 truncate">SW-SCHOOL</h1>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)}>
-            <Menu size={24} className="text-slate-500" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[10px] font-bold text-rose-600"
+            >
+              <LogOut size={14} className="mr-1" />
+              ออก
+            </button>
+            <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)}>
+              <Menu size={24} className="text-slate-500" />
+            </Button>
+          </div>
         </header>
         {/* Desktop Header */}
         <header className="hidden md:flex h-16 bg-white border-b border-slate-200 px-8 items-center justify-between">
@@ -301,6 +311,18 @@ export function AppLayout({ user, onLogout, children, currentMenu, onMenuChange,
           </div>
           
           <div className="flex-1 overflow-y-auto p-4 pb-24" onClick={e => e.stopPropagation()}>
+            <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-200 text-sm font-bold text-emerald-700">
+                  {user.name.charAt(0)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-slate-800">{user.name}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-slate-400">{user.role}</p>
+                </div>
+              </div>
+            </div>
+
             {(() => {
               const elements: React.ReactNode[] = [];
               let currentGroup: MenuItem[] = [];
@@ -351,6 +373,15 @@ export function AppLayout({ user, onLogout, children, currentMenu, onMenuChange,
 
               return elements;
             })()}
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-600 shadow-sm"
+            >
+              <LogOut size={18} />
+              ออกจากระบบ
+            </button>
           </div>
         </div>
       )}

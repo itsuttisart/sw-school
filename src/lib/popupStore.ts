@@ -7,13 +7,32 @@ export interface PopupData {
     student: boolean;
     parent: boolean;
     teacher: boolean;
-    admin?: boolean;
+    admin: boolean;
   };
   isActive: boolean;
   createdAt: string;
   durationDays?: number;
   expiresAt?: string;
 }
+
+const normalizeTargetRoles = (roles: Partial<PopupData['targetRoles']> = {}): PopupData['targetRoles'] => ({
+  student: !!roles.student,
+  parent: !!roles.parent,
+  teacher: !!roles.teacher,
+  admin: !!roles.admin
+});
+
+const normalizePopup = (popup: Partial<PopupData>): PopupData => ({
+  id: popup.id || Date.now().toString(),
+  title: popup.title || 'ป๊อปอัพ',
+  content: popup.content || '',
+  imageUrl: popup.imageUrl || '',
+  targetRoles: normalizeTargetRoles(popup.targetRoles),
+  isActive: popup.isActive ?? true,
+  createdAt: popup.createdAt || new Date().toISOString(),
+  durationDays: popup.durationDays,
+  expiresAt: popup.expiresAt
+});
 
 const defaultPopups: PopupData[] = [
   {
@@ -36,12 +55,14 @@ export const getPopups = (): PopupData[] => {
     return defaultPopups;
   }
   try {
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) return defaultPopups;
+    return parsed.map(normalizePopup);
   } catch (e) {
     return defaultPopups;
   }
 };
 
 export const savePopups = (popups: PopupData[]) => {
-  localStorage.setItem('school_popups', JSON.stringify(popups));
+  localStorage.setItem('school_popups', JSON.stringify(popups.map(normalizePopup)));
 };

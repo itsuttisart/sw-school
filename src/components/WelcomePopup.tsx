@@ -11,38 +11,33 @@ export function WelcomePopup({ user }: { user: User }) {
     // wait a brief moment for smooth effect
     const timer = setTimeout(() => {
       const popups = getPopups();
-      const dismissedIds = JSON.parse(sessionStorage.getItem(`dismissedPopups_${user.id}`) || '[]');
-      
-      // Find the first active popup that applies to the user and hasn't been dismissed
+
       const popupToShow = popups.find(p => {
-        // Check if expired
-        if (p.expiresAt && new Date(p.expiresAt) < new Date()) {
+        const now = new Date();
+
+        if (p.expiresAt && new Date(p.expiresAt) < now) {
           return false;
         }
+
         if (!p.isActive) return false;
-        if (dismissedIds.includes(p.id)) return false;
-        
-        // check role
-        if (user.role === 'admin' && p.targetRoles.admin) return true;
-        if (user.role === 'teacher' && p.targetRoles.teacher) return true;
-        if (user.role === 'student' && p.targetRoles.student) return true;
-        if (user.role === 'parent' && p.targetRoles.parent) return true;
-        
+
+        const targetRoles = p.targetRoles || { student: false, parent: false, teacher: false, admin: false };
+        if (user.role === 'admin' && targetRoles.admin) return true;
+        if (user.role === 'teacher' && targetRoles.teacher) return true;
+        if (user.role === 'student' && targetRoles.student) return true;
+        if (user.role === 'parent' && targetRoles.parent) return true;
+
         return false;
       });
 
-      if (popupToShow) {
-        setActivePopup(popupToShow);
-      }
-    }, 1000); // show 1 second after mount
+      setActivePopup(popupToShow || null);
+    }, 1000);
 
     return () => clearTimeout(timer);
   }, [user]);
 
   const handleDismiss = () => {
     if (!activePopup) return;
-    const dismissedIds = JSON.parse(sessionStorage.getItem(`dismissedPopups_${user.id}`) || '[]');
-    sessionStorage.setItem(`dismissedPopups_${user.id}`, JSON.stringify([...dismissedIds, activePopup.id]));
     setActivePopup(null);
   };
 

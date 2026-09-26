@@ -63,6 +63,27 @@ export function AdminPopupManager() {
     savePopups(newPopups);
   };
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      Swal.fire({
+        title: 'รูปแบบไฟล์ไม่ถูกต้อง',
+        text: 'กรุณาเลือกไฟล์รูปภาพเท่านั้น',
+        icon: 'error'
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      setEditingPopup(prev => prev ? { ...prev, imageUrl: result } : prev);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPopup) return;
@@ -122,14 +143,28 @@ export function AdminPopupManager() {
           </div>
           
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">URL รูปภาพ (ตัวเลือก)</label>
-            <Input 
-              placeholder="https://example.com/image.jpg" 
-              value={editingPopup.imageUrl || ''}
-              onChange={e => setEditingPopup({...editingPopup, imageUrl: e.target.value})}
-            />
+            <label className="block text-sm font-bold text-slate-700 mb-2">รูปภาพป็อปอัพ</label>
+            <div className="space-y-3">
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-indigo-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">หรือป้อน URL รูปภาพ (ถ้าต้องการ)</label>
+                <Input
+                  placeholder="https://example.com/image.jpg"
+                  value={editingPopup.imageUrl || ''}
+                  onChange={e => setEditingPopup({...editingPopup, imageUrl: e.target.value})}
+                />
+              </div>
+            </div>
             {editingPopup.imageUrl && (
-              <div className="mt-3 w-full h-40 rounded-xl overflow-hidden border border-slate-200">
+              <div className="mt-3 w-full h-40 rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
                 <img src={editingPopup.imageUrl} alt="Preview" className="w-full h-full object-cover" />
               </div>
             )}
