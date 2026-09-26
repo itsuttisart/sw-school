@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { LockKeyhole, ShieldCheck } from 'lucide-react';
+import { Delete, LockKeyhole, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { User } from '@/lib/types';
@@ -13,6 +13,7 @@ type PinAccessProps = {
 };
 
 export function PinAccess({ user, mode, onSuccess, onCancel }: PinAccessProps) {
+  const [activeField, setActiveField] = useState<'pin' | 'confirmation'>('pin');
   const [pin, setPin] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [error, setError] = useState('');
@@ -79,6 +80,28 @@ export function PinAccess({ user, mode, onSuccess, onCancel }: PinAccessProps) {
     setError('');
   };
 
+  const addDigit = (digit: string) => {
+    setError('');
+    if (activeField === 'confirmation' && mode === 'setup') {
+      if (confirmation.length < 6) setConfirmation(current => current + digit);
+      return;
+    }
+
+    if (pin.length >= 6) return;
+    const nextPin = pin + digit;
+    setPin(nextPin);
+    if (mode === 'setup' && nextPin.length === 6) setActiveField('confirmation');
+  };
+
+  const deleteDigit = () => {
+    setError('');
+    if (activeField === 'confirmation' && mode === 'setup') {
+      setConfirmation(current => current.slice(0, -1));
+      return;
+    }
+    setPin(current => current.slice(0, -1));
+  };
+
   return (
     <main className="flex min-h-dvh items-center justify-center bg-[#F1F5F9] p-4 font-sans text-slate-800">
       <section className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
@@ -96,12 +119,14 @@ export function PinAccess({ user, mode, onSuccess, onCancel }: PinAccessProps) {
             <Input
               id="pin"
               type="password"
-              inputMode="numeric"
+              inputMode="none"
               autoComplete={mode === 'setup' ? 'new-password' : 'current-password'}
               pattern="[0-9]{6}"
               maxLength={6}
               value={pin}
+              onFocus={() => setActiveField('pin')}
               onChange={event => updateDigits(event.target.value, setPin)}
+              readOnly
               className="h-12 text-center text-xl tracking-[0.4em]"
               autoFocus
               required
@@ -114,17 +139,53 @@ export function PinAccess({ user, mode, onSuccess, onCancel }: PinAccessProps) {
               <Input
                 id="pin-confirm"
                 type="password"
-                inputMode="numeric"
+                inputMode="none"
                 autoComplete="new-password"
                 pattern="[0-9]{6}"
                 maxLength={6}
                 value={confirmation}
+                onFocus={() => setActiveField('confirmation')}
                 onChange={event => updateDigits(event.target.value, setConfirmation)}
+                readOnly
                 className="h-12 text-center text-xl tracking-[0.4em]"
                 required
               />
             </div>
           )}
+
+          <div className="mx-auto grid max-w-xs grid-cols-3 gap-2" aria-label="แป้นตัวเลข PIN">
+            {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(digit => (
+              <button
+                key={digit}
+                type="button"
+                aria-label={`เลข ${digit}`}
+                onClick={() => addDigit(digit)}
+                disabled={isSubmitting || (mode === 'unlock' && Date.now() < lockedUntil)}
+                className="h-12 rounded-xl border border-slate-200 bg-slate-50 text-lg font-semibold text-slate-800 transition-colors hover:bg-emerald-50 active:bg-emerald-100 disabled:opacity-50"
+              >
+                {digit}
+              </button>
+            ))}
+            <span aria-hidden="true" />
+            <button
+              type="button"
+              aria-label="เลข 0"
+              onClick={() => addDigit('0')}
+              disabled={isSubmitting || (mode === 'unlock' && Date.now() < lockedUntil)}
+              className="h-12 rounded-xl border border-slate-200 bg-slate-50 text-lg font-semibold text-slate-800 transition-colors hover:bg-emerald-50 active:bg-emerald-100 disabled:opacity-50"
+            >
+              0
+            </button>
+            <button
+              type="button"
+              aria-label="ลบตัวเลขล่าสุด"
+              onClick={deleteDigit}
+              disabled={isSubmitting}
+              className="flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition-colors hover:bg-rose-50 hover:text-rose-600 active:bg-rose-100 disabled:opacity-50"
+            >
+              <Delete size={20} />
+            </button>
+          </div>
 
           {error && <p role="alert" className="text-sm font-medium text-rose-600">{error}</p>}
 
