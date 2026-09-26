@@ -215,7 +215,7 @@ export function AppLayout({ user, onLogout, children, currentMenu, onMenuChange,
         <div className="p-4 border-t border-slate-100">
           <div className="bg-slate-50 rounded-xl p-3 flex items-center gap-3 mb-3 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => onMenuChange('ตั้งค่าบัญชี')}>
             <div className="w-10 h-10 rounded-full bg-emerald-200 border-2 border-white overflow-hidden flex items-center justify-center text-emerald-800 font-bold">
-              {user.name.charAt(0)}
+              {user.avatar ? <img src={user.avatar} alt="" className="h-full w-full object-cover" /> : user.name.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold truncate text-slate-800">{user.name}</p>
@@ -325,7 +325,7 @@ export function AppLayout({ user, onLogout, children, currentMenu, onMenuChange,
             <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-200 text-sm font-bold text-emerald-700">
-                  {user.name.charAt(0)}
+                  {user.avatar ? <img src={user.avatar} alt="" className="h-full w-full object-cover" /> : user.name.charAt(0)}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-slate-800">{user.name}</p>

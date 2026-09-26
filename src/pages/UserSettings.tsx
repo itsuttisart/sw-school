@@ -4,20 +4,79 @@ import { southProvinces } from '@/lib/addressData';
 import { UserCircle, Lock, Save, Camera, Mail, Phone, MapPin, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { setUserPassword, verifyUserPassword } from '@/lib/authStore';
 import Swal from 'sweetalert2';
 
 export function UserSettings({ user, onUpdate }: { user: User, onUpdate?: (u: User) => void }) {
   const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile');
+  const [profileForm, setProfileForm] = useState({
+    name: user.name,
+    email: user.email || '',
+    phone: user.phone || '',
+    address: user.address || ''
+  });
+  const [avatar, setAvatar] = useState(user.avatar || '');
   
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
 
-  const [selectedProvince, setSelectedProvince] = useState(southProvinces[0].name);
-  const [selectedDistrict, setSelectedDistrict] = useState(southProvinces[0].districts[0].name);
-  const [selectedSubdistrict, setSelectedSubdistrict] = useState(southProvinces[0].districts[0].subdistricts[0]);
+  const initialProvince = southProvinces.find(province => province.name === user.province) || southProvinces[0];
+  const initialDistrict = initialProvince.districts.find(district => district.name === user.district) || initialProvince.districts[0];
+  const [selectedProvince, setSelectedProvince] = useState(initialProvince.name);
+  const [selectedDistrict, setSelectedDistrict] = useState(initialDistrict.name);
+  const [selectedSubdistrict, setSelectedSubdistrict] = useState(
+    initialDistrict.subdistricts.includes(user.subdistrict || '') ? user.subdistrict! : initialDistrict.subdistricts[0]
+  );
+
+  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
+      Swal.fire('เลือกรูปไม่ได้', 'รองรับไฟล์รูปภาพขนาดไม่เกิน 5 MB', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => Swal.fire('อ่านรูปไม่ได้', 'กรุณาลองเลือกไฟล์อื่น', 'error');
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => Swal.fire('อ่านรูปไม่ได้', 'กรุณาลองเลือกไฟล์อื่น', 'error');
+      image.onload = () => {
+        const scale = Math.min(1, 512 / Math.max(image.width, image.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext('2d');
+        if (!context) return;
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        setAvatar(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      image.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSaveProfile = () => {
+    const updatedUser = {
+      ...user,
+      ...profileForm,
+      name: profileForm.name.trim(),
+      avatar: avatar || undefined,
+      province: selectedProvince,
+      district: selectedDistrict,
+      subdistrict: selectedSubdistrict
+    };
+    if (!updatedUser.name) {
+      Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกชื่อ-นามสกุล', 'warning');
+      return;
+    }
+    onUpdate?.(updatedUser);
     Swal.fire({
       title: 'บันทึกสำเร็จ',
       text: 'ข้อมูลส่วนตัวของคุณได้รับการอัปเดตเรียบร้อยแล้ว',
@@ -27,13 +86,42 @@ export function UserSettings({ user, onUpdate }: { user: User, onUpdate?: (u: Us
     });
   };
 
-  const handleSavePassword = () => {
-    Swal.fire({
-      title: 'เปลี่ยนรหัสผ่านสำเร็จ',
-      text: 'รหัสผ่านของคุณถูกเปลี่ยนเรียบร้อยแล้ว กรุณาเข้าสู่ระบบใหม่ด้วยรหัสผ่านใหม่ในครั้งต่อไป',
-      icon: 'success',
-      confirmButtonColor: '#10b981'
-    });
+  const handleSavePassword = async () => {
+    if (isSavingPassword) return;
+    if (!await verifyUserPassword(user.id, currentPassword)) {
+      Swal.fire('รหัสผ่านไม่ถูกต้อง', 'กรุณาตรวจสอบรหัสผ่านปัจจุบันแล้วลองอีกครั้ง', 'error');
+      return;
+    }
+    if (newPassword.length < 12) {
+      Swal.fire('รหัสผ่านยังไม่ปลอดภัยพอ', 'รหัสผ่านใหม่ต้องมีอย่างน้อย 12 ตัวอักษร', 'warning');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Swal.fire('ยืนยันรหัสผ่านไม่ตรงกัน', 'กรุณากรอกรหัสผ่านใหม่ทั้งสองช่องให้ตรงกัน', 'warning');
+      return;
+    }
+    if (newPassword === currentPassword) {
+      Swal.fire('รหัสผ่านซ้ำเดิม', 'กรุณาเลือกรหัสผ่านใหม่ที่ต่างจากรหัสปัจจุบัน', 'warning');
+      return;
+    }
+
+    setIsSavingPassword(true);
+    try {
+      await setUserPassword(user.id, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      await Swal.fire({
+        title: 'เปลี่ยนรหัสผ่านสำเร็จ',
+        text: 'ใช้รหัสผ่านใหม่ในการเข้าสู่ระบบครั้งถัดไป',
+        icon: 'success',
+        confirmButtonColor: '#10b981'
+      });
+    } catch {
+      Swal.fire('เปลี่ยนรหัสผ่านไม่สำเร็จ', 'ไม่สามารถบันทึกข้อมูลในอุปกรณ์นี้ได้ กรุณาลองใหม่', 'error');
+    } finally {
+      setIsSavingPassword(false);
+    }
   };
 
   return (
@@ -71,36 +159,37 @@ export function UserSettings({ user, onUpdate }: { user: User, onUpdate?: (u: Us
               <div className="flex flex-col sm:flex-row gap-6 mb-8 items-center sm:items-start">
                 <div className="relative group">
                   <div className="w-24 h-24 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-3xl font-bold border-4 border-white shadow-sm overflow-hidden">
-                    {user.name.charAt(0)}
+                    {avatar ? <img src={avatar} alt="รูปโปรไฟล์" className="h-full w-full object-cover" /> : user.name.charAt(0)}
                   </div>
-                  <button className="absolute bottom-0 right-0 p-2 bg-slate-800 text-white rounded-full shadow-md hover:bg-slate-700 transition-colors">
+                  <label title="อัปโหลดรูปโปรไฟล์" className="absolute bottom-0 right-0 cursor-pointer p-2 bg-slate-800 text-white rounded-full shadow-md hover:bg-slate-700 transition-colors">
+                    <input type="file" accept="image/*" onChange={handleAvatarUpload} className="sr-only" />
                     <Camera size={14} />
-                  </button>
+                  </label>
                 </div>
                 <div className="flex-1 space-y-1 text-center sm:text-left">
                   <h4 className="text-lg font-bold text-slate-800">{user.name}</h4>
                   <p className="text-slate-500 text-sm capitalize">บทบาท: {user.role}</p>
-                  <p className="text-slate-500 text-sm">{user.username || 'example@email.com'}</p>
+                  <p className="text-slate-500 text-sm">{user.email || user.username || 'ยังไม่ได้เพิ่มอีเมล'}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">ชื่อ-นามสกุล</label>
-                  <Input defaultValue={user.name} />
+                    <Input value={profileForm.name} onChange={event => setProfileForm({ ...profileForm, name: event.target.value })} />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">อีเมล</label>
                   <div className="relative">
                     <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <Input defaultValue={user.username || 'example@email.com'} className="pl-10" />
+                    <Input type="email" value={profileForm.email} onChange={event => setProfileForm({ ...profileForm, email: event.target.value })} className="pl-10" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">เบอร์โทรศัพท์</label>
                   <div className="relative">
                     <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <Input defaultValue="089-123-4567" className="pl-10" />
+                    <Input type="tel" value={profileForm.phone} onChange={event => setProfileForm({ ...profileForm, phone: event.target.value })} className="pl-10" />
                   </div>
                 </div>
                 <div className="md:col-span-2">
@@ -160,9 +249,10 @@ export function UserSettings({ user, onUpdate }: { user: User, onUpdate?: (u: Us
                   <div className="relative">
                     <MapPin size={18} className="absolute left-3 top-3 text-slate-400" />
                     <textarea 
-                      className="w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white min-h-[80px]" 
+                      className="w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white min-h-20"
                       placeholder="รายละเอียดที่อยู่เพิ่มเติม เช่น บ้านเลขที่, หมู่, ถนน, ซอย..."
-                      defaultValue="123/45 หมู่ 1"
+                      value={profileForm.address}
+                      onChange={event => setProfileForm({ ...profileForm, address: event.target.value })}
                     />
                   </div>
                 </div>
@@ -240,7 +330,7 @@ export function UserSettings({ user, onUpdate }: { user: User, onUpdate?: (u: Us
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">รหัสผ่านปัจจุบัน</label>
                   <div className="relative">
-                    <Input type={showCurrent ? "text" : "password"} placeholder="••••••••" className="pr-10" />
+                    <Input type={showCurrent ? "text" : "password"} autoComplete="current-password" value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} placeholder="รหัสผ่านปัจจุบัน" className="pr-10" />
                     <button 
                       type="button"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
@@ -253,7 +343,7 @@ export function UserSettings({ user, onUpdate }: { user: User, onUpdate?: (u: Us
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">รหัสผ่านใหม่</label>
                   <div className="relative">
-                    <Input type={showNew ? "text" : "password"} placeholder="••••••••" className="pr-10" />
+                    <Input type={showNew ? "text" : "password"} autoComplete="new-password" value={newPassword} onChange={event => setNewPassword(event.target.value)} placeholder="อย่างน้อย 12 ตัวอักษร" className="pr-10" />
                     <button 
                       type="button"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
@@ -266,7 +356,7 @@ export function UserSettings({ user, onUpdate }: { user: User, onUpdate?: (u: Us
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">ยืนยันรหัสผ่านใหม่</label>
                   <div className="relative">
-                    <Input type={showConfirm ? "text" : "password"} placeholder="••••••••" className="pr-10" />
+                    <Input type={showConfirm ? "text" : "password"} autoComplete="new-password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} placeholder="ยืนยันรหัสผ่านใหม่" className="pr-10" />
                     <button 
                       type="button"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
@@ -279,7 +369,7 @@ export function UserSettings({ user, onUpdate }: { user: User, onUpdate?: (u: Us
               </div>
               
               <div className="mt-8 flex justify-end">
-                <Button onClick={handleSavePassword} className="bg-blue-600 hover:bg-blue-700 text-white shadow-md">
+                <Button type="button" onClick={handleSavePassword} disabled={isSavingPassword} className="bg-blue-600 hover:bg-blue-700 text-white shadow-md">
                   <Save size={18} className="mr-2" /> เปลี่ยนรหัสผ่าน
                 </Button>
               </div>

@@ -8,6 +8,11 @@ export interface User {
   password?: string;
   username?: string; // admin
   phone?: string; // teacher, parent
+  email?: string;
+  province?: string;
+  district?: string;
+  subdistrict?: string;
+  address?: string;
   studentId?: string; // student
   // Specific fields
   class?: string; // student

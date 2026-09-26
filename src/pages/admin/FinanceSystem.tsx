@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreditCard, TrendingUp, TrendingDown, DollarSign, Search, Filter, Plus, Edit, CheckCircle, XCircle, AlertCircle, Trash2, FileSpreadsheet, Download, BarChart2 } from 'lucide-react';
+import { CreditCard, TrendingUp, TrendingDown, DollarSign, Search, Filter, Plus, Edit, CheckCircle, XCircle, AlertCircle, Trash2, FileSpreadsheet, Download, BarChart2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import Swal from 'sweetalert2';

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '@/lib/types';
 import { mockUsers } from '@/lib/data';
+import { getProfiledUser, verifyUserPassword } from '@/lib/authStore';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import Swal from 'sweetalert2';
@@ -10,37 +11,47 @@ export function Login({ onLogin }: { onLogin: (u: User) => void }) {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const user = mockUsers.find(u => {
-      const matchIdentifier = 
-        (u.role === 'admin' && u.username === identifier) ||
-        (u.role === 'teacher' && u.phone === identifier) ||
-        (u.role === 'parent' && u.phone === identifier) ||
-        (u.role === 'student' && u.studentId === identifier);
-        
-      return matchIdentifier && u.password === password;
-    });
 
-    if (user) {
-      Swal.fire({
-        icon: 'success',
-        title: 'เข้าสู่ระบบสำเร็จ',
-        text: `ยินดีต้อนรับ ${user.name}`,
-        timer: 1500,
-        showConfirmButton: false
-      }).then(() => {
-        onLogin(user);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const user = mockUsers.find(u => {
+        const profile = getProfiledUser(u);
+        const matchIdentifier =
+          (u.role === 'admin' && u.username === identifier) ||
+          (u.role === 'teacher' && profile.phone === identifier) ||
+          (u.role === 'parent' && profile.phone === identifier) ||
+          (u.role === 'student' && u.studentId === identifier);
+
+        return matchIdentifier;
       });
-    } else {
-      Swal.fire({
-        icon: 'error',
-        title: 'เข้าสู่ระบบล้มเหลว',
-        text: 'ข้อมูลการเข้าสู่ระบบไม่ถูกต้อง โปรดลองอีกครั้ง',
-        confirmButtonColor: '#10b981'
-      });
+
+      if (user && await verifyUserPassword(user.id, password)) {
+        Swal.fire({
+          icon: 'success',
+          title: 'เข้าสู่ระบบสำเร็จ',
+          text: `ยินดีต้อนรับ ${user.name}`,
+          timer: 1500,
+          showConfirmButton: false
+        }).then(() => {
+          onLogin(user);
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'เข้าสู่ระบบล้มเหลว',
+          text: 'ข้อมูลการเข้าสู่ระบบไม่ถูกต้อง โปรดลองอีกครั้ง',
+          confirmButtonColor: '#10b981'
+        });
+      }
+    } catch {
+      Swal.fire('เข้าสู่ระบบไม่ได้', 'พื้นที่จัดเก็บข้อมูลของเบราว์เซอร์ไม่พร้อมใช้งาน', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -85,7 +96,7 @@ export function Login({ onLogin }: { onLogin: (u: User) => void }) {
           </div>
           
           <div className="pt-4">
-            <Button type="submit" className="w-full" size="lg">
+            <Button type="submit" disabled={isSubmitting} className="w-full" size="lg">
               เข้าสู่ระบบ
             </Button>
           </div>

@@ -48,6 +48,8 @@ import { UserSettings } from '@/pages/UserSettings';
 import { usePWAInstall } from '@/lib/usePWAInstall';
 import { useOnlineStatus } from '@/lib/useOnlineStatus';
 import { Download } from 'lucide-react';
+import { PinAccess } from '@/components/auth/PinAccess';
+import { clearRememberedUser, getProfiledUser, getSavedPin, getStartupAuth, rememberUser, safeUser, saveUserProfile } from '@/lib/authStore';
 
 const IOS_INSTALL_PROMPT_KEY = 'sw-school-ios-install-prompt-shown-at';
 const IOS_INSTALL_PROMPT_INTERVAL = 30 * 24 * 60 * 60 * 1000;
@@ -131,16 +133,77 @@ function OfflineIndicator() {
 }
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const [startupAuth] = useState(getStartupAuth);
+  const [user, setUser] = useState<User | null>(startupAuth.authenticatedUser);
+  const [lockedUser, setLockedUser] = useState<User | null>(startupAuth.lockedUser);
+  const [pinSetupUser, setPinSetupUser] = useState<User | null>(null);
   const [simulatedUser, setSimulatedUser] = useState<User | null>(null);
   const [currentMenu, setCurrentMenu] = useState<string>('Dashboard');
+
+  const handleLogin = (loginUser: User) => {
+    const authenticatedUser = getProfiledUser(loginUser);
+    setCurrentMenu('Dashboard');
+    if (getSavedPin(authenticatedUser.id)) {
+      rememberUser(authenticatedUser);
+      setUser(authenticatedUser);
+    } else {
+      setPinSetupUser(authenticatedUser);
+    }
+  };
+
+  const handleLogout = () => {
+    clearRememberedUser();
+    setUser(null);
+    setLockedUser(null);
+    setPinSetupUser(null);
+  };
+
+  const handleUserUpdate = (updatedUser: User) => {
+    const profileUser = safeUser(updatedUser);
+    saveUserProfile(profileUser);
+    if (profileUser.id === user?.id) setUser(profileUser);
+    else if (profileUser.id === simulatedUser?.id) setSimulatedUser(profileUser);
+  };
+
+  if (lockedUser && !user) {
+    return (
+      <PinAccess
+        user={lockedUser}
+        mode="unlock"
+        onSuccess={() => {
+          rememberUser(lockedUser);
+          setUser(lockedUser);
+          setLockedUser(null);
+        }}
+        onCancel={() => {
+          clearRememberedUser();
+          setLockedUser(null);
+        }}
+      />
+    );
+  }
+
+  if (pinSetupUser && !user) {
+    return (
+      <PinAccess
+        user={pinSetupUser}
+        mode="setup"
+        onSuccess={() => {
+          rememberUser(pinSetupUser);
+          setUser(pinSetupUser);
+          setPinSetupUser(null);
+        }}
+        onCancel={() => setPinSetupUser(null)}
+      />
+    );
+  }
 
   if (!user) {
     return (
       <>
         <PWAInstallPrompt currentMenu={null} />
         <OfflineIndicator />
-        <Login onLogin={(u) => { setUser(u); setCurrentMenu('Dashboard'); }} />
+        <Login onLogin={handleLogin} />
       </>
     );
   }
@@ -193,7 +256,7 @@ export default function App() {
       if (currentMenu === 'ข้อมูลบุตร') return <StudentProfile user={activeUser} />;
       if (currentMenu === 'แชทกับครูที่ปรึกษา') return <ParentChat user={activeUser} />;
       
-      if (currentMenu === 'ตั้งค่าบัญชี') return <UserSettings user={activeUser} />;
+      if (currentMenu === 'ตั้งค่าบัญชี') return <UserSettings user={activeUser} onUpdate={handleUserUpdate} />;
       
       return <AdminDashboard />;
     }
@@ -209,7 +272,7 @@ export default function App() {
       if (currentMenu === 'เช็คชื่อ' || currentMenu === 'เช็คชื่อรายวิชา') return <TeacherSubjectAttendance user={user} />;
       if (currentMenu === 'เช็คชื่อละหมาด') return <TeacherPrayerAttendance user={user} />;
       if (currentMenu === 'แชทกับผู้ปกครอง') return <TeacherChat user={user} />;
-      if (currentMenu === 'ตั้งค่าบัญชี') return <UserSettings user={user} />;
+      if (currentMenu === 'ตั้งค่าบัญชี') return <UserSettings user={user} onUpdate={handleUserUpdate} />;
       return <TeacherDashboard user={user} />;
     }
     if (user.role === 'student') {
@@ -223,7 +286,7 @@ export default function App() {
       if (currentMenu === 'เอกสาร') return <StudentDocuments user={user} />;
       if (currentMenu === 'กิจกรรม/ผลงาน') return <StudentActivities user={user} />;
       if (currentMenu === 'แจ้งเตือน') return <StudentNotifications user={user} />;
-      if (currentMenu === 'ตั้งค่าบัญชี') return <UserSettings user={user} />;
+      if (currentMenu === 'ตั้งค่าบัญชี') return <UserSettings user={user} onUpdate={handleUserUpdate} />;
       return <StudentDashboard user={user} />;
     }
     if (user.role === 'parent') {
@@ -235,14 +298,14 @@ export default function App() {
       if (currentMenu === 'การบ้าน') return <StudentHomework user={user} />;
       if (currentMenu === 'ข่าวสาร') return <StudentNews user={user} />;
       if (currentMenu === 'แชทกับครูที่ปรึกษา') return <ParentChat user={user} />;
-      if (currentMenu === 'ตั้งค่าบัญชี') return <UserSettings user={user} />;
+      if (currentMenu === 'ตั้งค่าบัญชี') return <UserSettings user={user} onUpdate={handleUserUpdate} />;
       return <ParentDashboard user={user} />;
     }
     return null;
   };
 
   return (
-    <AppLayout user={user} onLogout={() => setUser(null)} currentMenu={currentMenu} onMenuChange={setCurrentMenu} simulatedUser={simulatedUser} onSimulateUser={setSimulatedUser}>
+    <AppLayout user={user} onLogout={handleLogout} currentMenu={currentMenu} onMenuChange={setCurrentMenu} simulatedUser={simulatedUser} onSimulateUser={setSimulatedUser}>
       <PWAInstallPrompt currentMenu={currentMenu} />
       <OfflineIndicator />
       {renderContent()}
